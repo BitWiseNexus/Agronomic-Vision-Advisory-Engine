@@ -1,0 +1,35 @@
+# --- Python ---
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# --- Secrets ---
+.env
+.env.local
+
+# --- Heavy artefacts ---
+data/raw/
+data/processed/
+models/checkpoints/*
+!models/checkpoints/.gitkeep
+storage/
+outputs/
+*.pt
+*.pth
+*.onnx
+
+# --- Node / frontend ---
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# --- OS / editor ---
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/*
+!.vscode/settings.json
