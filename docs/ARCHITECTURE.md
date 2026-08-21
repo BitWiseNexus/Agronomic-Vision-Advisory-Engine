@@ -37,7 +37,8 @@ Minor Project/
 │     │  ├─ preprocess.py          decode, resize, white-balance, tensors
 │     │  ├─ labels.py              PlantVillage 38-class taxonomy
 │     │  ├─ classifier.py          ResNet-50 wrapper (checkpoint optional)
-│     │  └─ severity.py            OpenCV severity index + action tier
+│     │  ├─ severity.py            OpenCV severity index + action tier
+│     │  └─ synthetic.py           synthetic leaves, damage known by construction
 │     ├─ rag/
 │     │  ├─ embeddings.py          local bge-small, hash-embed fallback
 │     │  ├─ index.py               PGVectorStore | SimpleVectorStore
@@ -72,18 +73,24 @@ Minor Project/
 │  ├─ make_samples.py              synthesise sample leaves (no download needed)
 │  ├─ ingest_knowledge.py          CLI wrapper around rag/ingest.py
 │  └─ download_plantvillage.py     Phase 1 dataset fetch
-└─ tests/
-   ├─ test_severity.py             synthetic leaves → known severity
-   ├─ test_pipeline.py             end-to-end with template provider
-   └─ test_api.py                  TestClient smoke
+├─ tests/
+│  ├─ conftest.py                  puts backend/ on sys.path; offline Settings fixture
+│  ├─ test_severity.py             severity vs. known truth + segmentation stress
+│  ├─ test_advisor.py              prompt guard rails, uncited-dosage stripping
+│  ├─ test_rag.py                  front matter, embeddings, query build, retrieval
+│  ├─ test_pipeline.py             end-to-end in the fully degraded configuration
+│  └─ test_api.py                  TestClient smoke over every route
+├─ pytest.ini
+└─ ruff.toml
 ```
 
 ## Import contract
 
 `backend/` is on `sys.path` as the package root, so everything imports as
-`app.<module>`. Notebooks and `ml/` scripts call `bootstrap_path()` from
-`notebooks/_bootstrap.py` / rely on `conftest.py` to insert `backend/` — no
-`pip install -e .` required, no relative-import gymnastics.
+`app.<module>`. Notebooks call `setup()` from `notebooks/_bootstrap.py`, scripts call
+`bootstrap()` from `scripts/_path.py`, `ml/` entry points insert it directly, and the test
+suite gets it from `tests/conftest.py` — no `pip install -e .` required and no
+relative-import gymnastics.
 
 ## The one rule for this codebase
 

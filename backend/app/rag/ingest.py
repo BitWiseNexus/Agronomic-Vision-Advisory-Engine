@@ -15,7 +15,7 @@ from typing import Any
 from app.config import Settings, get_settings
 from app.core.logging import get_logger
 from app.rag.embeddings import get_embedding_model
-from app.rag.index import KnowledgeIndex, _silence_default_llm, try_pgvector_store
+from app.rag.index import KnowledgeIndex, ensure_no_default_llm, try_pgvector_store
 
 log = get_logger(__name__)
 
@@ -128,7 +128,7 @@ def ingest_knowledge(
     from llama_index.core.node_parser import SentenceSplitter
 
     settings = settings or get_settings()
-    _silence_default_llm()
+    ensure_no_default_llm()
     directory = knowledge_dir or settings.knowledge_dir
 
     documents, skipped = load_documents(directory)
