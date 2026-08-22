@@ -1,0 +1,67 @@
+name: agronomic-engine
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: agro-postgres
+    environment:
+      POSTGRES_USER: agro
+      POSTGRES_PASSWORD: agro
+      POSTGRES_DB: agro
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agro -d agro"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: agro-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Inside the compose network Postgres is reachable by service name.
+      DATABASE_URL: postgresql+psycopg2://agro:agro@postgres:5432/agro
+      PGVECTOR_TABLE: agro_knowledge
+      EMBEDDING_MODEL: BAAI/bge-small-en-v1.5
+      EMBEDDING_DIM: "384"
+      CHECKPOINT_PATH: /app/models/checkpoints/resnet50_plantvillage.pt
+      LLM_PROVIDER: ${LLM_PROVIDER:-auto}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    volumes:
+      # Trained weights and the HF cache live outside the image.
+      - ./models:/app/models
+      - ./data/knowledge:/app/data/knowledge:ro
+      - model_cache:/models
+    restart: unless-stopped
+
+  # Phase 3. `docker compose --profile frontend up` once the PWA exists.
+  web:
+    profiles: ["frontend"]
+    build:
+      context: ./frontend
+    container_name: agro-web
+    depends_on:
+      - api
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000/api/v1
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  model_cache:
