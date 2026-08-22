@@ -1,0 +1,3 @@
+# Trained checkpoints land here (gitignored).
+# Until ml/train.py has been run, the classifier loads with an untrained head and every
+# prediction is flagged checkpoint_loaded=false.
