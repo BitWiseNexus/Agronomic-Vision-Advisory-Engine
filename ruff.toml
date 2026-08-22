@@ -1,0 +1,23 @@
+line-length = 100
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = [
+    "E501",    # line length is enforced by the formatter, not the linter
+    "B008",    # FastAPI's Depends()/File() in defaults is the framework idiom
+    "E731",    # short lambdas are used deliberately for local pct/to_u8 helpers
+    "UP042",   # `str, Enum` over StrEnum: the pydantic/FastAPI JSON-schema idiom
+]
+
+[lint.isort]
+known-first-party = ["app"]
+
+[lint.per-file-ignores]
+# Notebook-style scripts insert sys.path before importing app, so E402 is unavoidable.
+"scripts/*.py" = ["E402"]
+"ml/*.py" = ["E402"]
+"notebooks/*.py" = ["E402"]
+# Notebook cells import where they are used, so the reader sees what a cell needs.
+"notebooks/*.ipynb" = ["E402"]
+"tests/*.py" = ["SIM117"]

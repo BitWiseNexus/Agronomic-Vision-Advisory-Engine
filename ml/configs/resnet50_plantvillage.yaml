@@ -1,0 +1,45 @@
+# Two-stage transfer learning for ResNet-50 on PlantVillage.
+# Any key here can be overridden on the command line:
+#   python ml/train.py --config ml/configs/resnet50_plantvillage.yaml --epochs-head 2
+
+data_dir: data/raw/plantvillage
+output_path: models/checkpoints/resnet50_plantvillage.pt
+val_split: 0.15
+image_size: 224
+batch_size: 32
+num_workers: 4
+seed: 42
+
+# Stage 1 — backbone frozen, train the new 38-class head only. Cheap and stabilises
+# the randomly-initialised head before it can wreck the pretrained features.
+epochs_head: 3
+lr_head: 0.001
+
+# Stage 2 — unfreeze layer4 (and layer3 if unfreeze_layer3) and fine-tune at a low LR.
+# Unfreezing everything on a lab-clean dataset overfits fast and gains little.
+epochs_finetune: 7
+lr_finetune: 0.0001
+unfreeze_layer3: false
+
+weight_decay: 0.0001
+label_smoothing: 0.05
+grad_clip: 1.0
+
+# Augmentation. Colour jitter matters more than geometry here: PlantVillage is shot
+# under uniform lab lighting, and without heavy photometric augmentation the model
+# learns the lighting rather than the disease and collapses on field photos.
+augment:
+  horizontal_flip: 0.5
+  vertical_flip: 0.2
+  rotation_degrees: 25
+  color_jitter:
+    brightness: 0.35
+    contrast: 0.35
+    saturation: 0.35
+    hue: 0.06
+  random_resized_crop_scale: [0.7, 1.0]
+  blur_probability: 0.15
+  erasing_probability: 0.15
+
+amp: true          # mixed precision; ignored on CPU
+early_stop_patience: 3

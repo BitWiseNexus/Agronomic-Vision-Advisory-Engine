@@ -13,6 +13,8 @@ __pycache__/
 PLAN.md
 
 # --- Heavy artefacts ---
+postgres/
+data/
 data/raw/
 data/processed/
 models/checkpoints/*
