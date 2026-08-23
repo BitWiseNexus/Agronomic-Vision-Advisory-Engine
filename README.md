@@ -161,6 +161,31 @@ intuition:
 [`notebooks/01_severity_lab.ipynb`](notebooks/01_severity_lab.ipynb) reproduces all of this,
 including the failure modes that remain (blue cast −8.9 pp, overexposure −7.9 pp).
 
+## Dataset
+
+Training data is PlantVillage, from the canonical repository of the original paper:
+[spMohanty/PlantVillage-Dataset](https://github.com/spMohanty/PlantVillage-Dataset) —
+54,306 leaf images, 14 crops, 26 diseases, 38 classes. No account or API token needed.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\download_plantvillage.py --source github
+```
+
+This does a shallow, blobless, **sparse** clone of only `raw/color`. The repository stores
+three copies of every image (`color`, `grayscale`, `segmented`), so a plain `git clone`
+pulls roughly 3x the data plus the full history. Stay on `color` — `segmented` ships with
+the background already removed, which would bypass the leaf segmentation the severity index
+depends on and flatter the results. Kaggle and manual routes remain available as mirrors.
+
+The script verifies the 38 folder names against `app/vision/labels.py`; they match upstream
+exactly and in alphabetical order, which is the order `ImageFolder` assigns label indices in.
+`ml/train.py` also saves the class list into the checkpoint and `classifier.py` reads it
+back, so a label-order mismatch cannot silently make every prediction confidently wrong.
+
+Cite Mohanty, Hughes & Salathé (2016), *Using Deep Learning for Image-Based Plant Disease
+Detection*, Frontiers in Plant Science. The repository carries no LICENSE file, so there is
+no explicit grant — worth checking the terms before any use beyond coursework.
+
 ## Safety
 
 Pesticide dosage is the one place where a hallucination could cause real harm, so it is
