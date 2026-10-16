@@ -36,3 +36,16 @@ desktop.ini
 .DS_Store
 .vscode/*
 !.vscode/settings.json
+.idea/
+
+# --- Logs ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Documentation Guides ---
+how_it_works.md
+PROJECT_DEEP_DIVE.md
+BEGINNER_GUIDE.md
+docs/advanced_guides/

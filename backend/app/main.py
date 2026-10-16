@@ -48,7 +48,12 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         # The PWA is served from a different origin in dev; tighten this before deploying.
-        allow_origins=["http://localhost:5173", "http://localhost:4173", "http://localhost:3000"],
+        allow_origins=[
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://localhost:4173",
+            "http://localhost:3000",
+        ],
         allow_credentials=False,
         allow_methods=["GET", "POST"],
         allow_headers=["*"],

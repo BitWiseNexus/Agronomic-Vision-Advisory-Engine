@@ -1,0 +1,319 @@
+/* ─── Diagnose page styles ─────────────────────────────────── */
+
+.diagnose-page {
+  padding: 32px 20px 60px;
+  min-height: calc(100vh - 64px);
+}
+
+/* ── Step Indicator ──────────────────────────────────────────── */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  margin-bottom: 40px;
+  padding-top: 8px;
+}
+
+.step-dot-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.step-dot-wrapper:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 16px;
+  left: calc(50% + 20px);
+  width: 40px;
+  height: 2px;
+  background: var(--border-subtle);
+  transition: background var(--transition-medium);
+}
+
+.step-dot-wrapper.completed:not(:last-child)::after {
+  background: var(--green-600);
+}
+
+.step-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: var(--bg-tertiary);
+  color: var(--text-dim);
+  border: 2px solid var(--border-subtle);
+  transition: all var(--transition-medium);
+}
+
+.step-dot-wrapper.active .step-dot {
+  background: var(--green-600);
+  color: white;
+  border-color: var(--green-500);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+}
+
+.step-dot-wrapper.completed .step-dot {
+  background: var(--green-800);
+  color: var(--green-300);
+  border-color: var(--green-700);
+}
+
+.step-label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.step-dot-wrapper.active .step-label {
+  color: var(--green-400);
+}
+
+/* ── Step common ─────────────────────────────────────────────── */
+.capture-step,
+.context-step,
+.analyzing-step,
+.result-step {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.capture-step h2,
+.context-step h3 {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.step-desc {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  margin-bottom: 32px;
+}
+
+/* ── Dropzone ─────────────────────────────────────────────────── */
+.dropzone {
+  cursor: pointer;
+  padding: 60px 40px;
+  text-align: center;
+  border: 2px dashed var(--border-medium);
+  border-radius: var(--radius-xl);
+  transition: all var(--transition-medium);
+}
+
+.dropzone:hover,
+.dropzone.drag-over {
+  border-color: var(--green-500);
+  background: rgba(34, 197, 94, 0.04);
+  box-shadow: var(--glow-green);
+}
+
+.dropzone-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+  color: var(--green-500);
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+}
+
+.dropzone:hover .dropzone-icon {
+  opacity: 1;
+}
+
+.dropzone-text {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.dropzone-hint {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.capture-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── Context Step ────────────────────────────────────────────── */
+.context-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.preview-panel {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preview-panel h3 {
+  text-align: left;
+  font-size: 1rem;
+}
+
+.preview-image-wrapper {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+.preview-image {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  max-height: 300px;
+}
+
+.env-form {
+  padding: 24px;
+}
+
+.env-form h3 {
+  text-align: left;
+  font-size: 1.1rem;
+}
+
+.optional-tag {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+.form-hint {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--red-400);
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+  animation: slideDown 0.3s var(--ease-out);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ── Analyzing Step ──────────────────────────────────────────── */
+.analyzing-step {
+  display: flex;
+  justify-content: center;
+  padding-top: 40px;
+}
+
+.analyzing-card {
+  padding: 48px 40px;
+  text-align: center;
+  max-width: 480px;
+  width: 100%;
+}
+
+.analyzing-visual {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 24px;
+}
+
+.analyzing-ring {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(34, 197, 94, 0.06);
+  margin: 0 auto;
+}
+
+.analyzing-thumb {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--green-600);
+}
+
+.analyzing-card h3 {
+  margin-bottom: 8px;
+}
+
+.analyzing-desc {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  margin-bottom: 28px;
+}
+
+.analyzing-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.analysis-step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  background: rgba(34, 197, 94, 0.04);
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 768px) {
+  .context-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .step-indicator {
+    gap: 24px;
+  }
+
+  .step-dot-wrapper:not(:last-child)::after {
+    width: 24px;
+    left: calc(50% + 16px);
+  }
+}

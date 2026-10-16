@@ -1,41 +1,32 @@
-# Frontend — React PWA (Phase 3)
+# React + TypeScript + Vite
 
-Placeholder. The backend contract this will consume is already fixed and served at
-`http://localhost:8000/docs`, so the app can be built against a live API today.
+This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
-## Planned stack
+Currently, two official plugins are available:
 
-- Vite + React + TypeScript
-- `vite-plugin-pwa` for the service worker and install prompt
-- No component library — a handful of screens does not justify the bundle
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## Screens
+## React Compiler
 
-1. **Capture** — `<input type="file" capture="environment">` plus a live preview.
-   Calls `POST /api/v1/severity` on the still frame for instant feedback before the
-   farmer commits to the full analysis.
-2. **Context form** — soil type, season, irrigation, rainfall in the last 7 days,
-   crop stage, organic-only toggle. Every field optional; mirrors `EnvironmentContext`.
-   Persisted in `localStorage` — a farmer's soil type does not change between visits.
-3. **Result** — severity gauge, the mask overlay from `POST /api/v1/severity/overlay`
-   (this is the "show me why" view), the action tier, then the plan with citations.
-4. **History** — past diagnoses for the same field, so severity *trend* is visible.
-   Trend is what decides escalation, and one photo cannot show it.
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Offline behaviour
+## Expanding the Oxlint configuration
 
-Connectivity in a field is unreliable, so captures queue in IndexedDB and flush when the
-network returns. The severity endpoint is the cheap one; the full advisory needs the server.
+If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
 
-## Contract notes
-
-- `POST /api/v1/diagnose` takes multipart: `image` (file) + `environment` (JSON **string**).
-- Read `readiness.degraded` on every response and surface it. If the advisory came from the
-  template provider, or the classifier had no checkpoint, the user must be told — an
-  unqualified plan built on a placeholder diagnosis is the one genuinely harmful outcome.
-- Always display `disclaimer`.
-
-```bash
-npm create vite@latest . -- --template react-ts
-npm install && npm run dev
+```json
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  }
+}
 ```
+
+See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
