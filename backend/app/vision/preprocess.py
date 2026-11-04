@@ -70,8 +70,17 @@ def background_white_balance(image: np.ndarray, subject_mask: np.ndarray) -> np.
     reference = float(means.max())
     if reference <= 1e-6:
         return image
-    # A strongly coloured background is not a valid white reference.
-    if (reference - float(means.min())) / reference > 0.35:
+    # A strongly coloured background is not a valid white reference — with one exception.
+    # Shade lit by blue skylight casts a neutral tray well past the general limit (spread
+    # ~0.36), and left uncorrected it pushes yellowing into the green band: chlorosis
+    # under-reported by up to 20 pp in ml/benchmark_severity.py. Natural backgrounds are
+    # warm or green (soil, wood, foliage), almost never blue, so a blue-dominant cast with
+    # green between blue and red is trusted further. Warm casts keep the strict limit:
+    # brown soil looks exactly like a warm cast, and "correcting" it turns yellow lesions green.
+    blue, green, red = (float(c) for c in means)
+    spread = (reference - float(means.min())) / reference
+    cool_cast = blue == reference and red + 0.2 * (blue - red) <= green <= blue - 0.2 * (blue - red)
+    if spread > (0.55 if cool_cast else 0.35):
         return image
 
     gains = np.clip(reference / np.maximum(means, 1e-6), 1.0, 1.8)

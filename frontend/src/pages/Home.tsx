@@ -1,226 +1,180 @@
 /* ─── Home / Landing Page ──────────────────────────────────── */
 
-import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { getReadiness } from '../api';
-import type { ReadinessResponse } from '../types';
+import { Link } from 'react-router-dom';
+import { useBackend } from '../hooks';
+import { TIER_CONFIG, TIER_ORDER, type SeverityReport } from '../types';
+import Icon, { type IconName } from '../components/Icon';
+import ImageCompare from '../components/ImageCompare';
+import { TierPill, TierScale, TissueBar } from '../components/Severity';
 import './Home.css';
 
-export default function Home() {
-  const navigate = useNavigate();
-  const [readiness, setReadiness] = useState<ReadinessResponse | null>(null);
-  const [backendUp, setBackendUp] = useState<boolean | null>(null);
+/* Real output of the severity engine on data/samples/leaf_moderate.png */
+const SAMPLE_REPORT: SeverityReport = {
+  severity_pct: 16.31,
+  necrotic_pct: 9.21,
+  chlorotic_pct: 7.1,
+  healthy_pct: 83.4,
+  lesion_count: 11,
+  largest_lesion_pct: 3.5,
+  leaf_coverage_pct: 38,
+  action_tier: 'moderate',
+  quality_warnings: [],
+};
 
-  useEffect(() => {
-    getReadiness()
-      .then(r => { setReadiness(r); setBackendUp(true); })
-      .catch(() => setBackendUp(false));
-  }, []);
+const STEPS: { icon: IconName; title: string; body: string }[] = [
+  {
+    icon: 'scan',
+    title: 'Measure the damage',
+    body: 'OpenCV separates the leaf from its background and classifies every pixel as healthy, yellowing or dead. The result is an exact damaged-area percentage — counted, not guessed.',
+  },
+  {
+    icon: 'search',
+    title: 'Identify the disease',
+    body: 'A ResNet-50 network fine-tuned on PlantVillage names the crop and disease across 38 classes, and says when it isn’t confident.',
+  },
+  {
+    icon: 'book',
+    title: 'Look up the guidance',
+    body: 'The diagnosis, severity and your field conditions query a library of extension bulletins, IPM guides and pesticide labels.',
+  },
+  {
+    icon: 'file',
+    title: 'Write a grounded plan',
+    body: 'A language model drafts the plan inside the limits of the measured tier. Any chemical or dose without a cited source is removed.',
+  },
+];
+
+export default function Home() {
+  const backend = useBackend();
 
   return (
-    <div className="home-page">
-      {/* Hero Section */}
-      <section className="hero" id="hero-section">
-        {/* Animated background particles */}
-        <div className="hero-particles">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className={`particle particle-${i + 1}`} />
-          ))}
-        </div>
+    <div className="home">
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <section className="hero">
+        <div className="container hero-inner">
+          <div className="hero-copy rise">
+            <span className="badge badge-accent hero-badge">
+              <Icon name="leaf" size={13} /> Crop disease advisory
+            </span>
+            <h1>
+              Photograph a leaf.<br />
+              <span className="hero-accent">Get a treatment plan you can trust.</span>
+            </h1>
+            <p className="hero-sub">
+              AgroVision measures exactly how much of the leaf is damaged, identifies the disease, and writes a
+              treatment plan that is only allowed to be as aggressive as the damage justifies.
+            </p>
+            <div className="hero-actions">
+              <Link to="/diagnose" className="btn btn-primary btn-lg" id="start-diagnosis-btn">
+                <Icon name="camera" /> Diagnose a leaf
+              </Link>
+              <Link to="/history" className="btn btn-secondary btn-lg" id="view-history-btn">
+                <Icon name="history" /> Past reports
+              </Link>
+            </div>
 
-        <div className="hero-content animate-slide-up">
-          <div className="hero-badge badge badge-green">
-            <span className="badge-dot" />
-            AI-Powered Crop Advisory
-          </div>
-
-          <h1 className="hero-title">
-            Photograph a leaf.<br />
-            <span className="gradient-text">Get a treatment plan.</span>
-          </h1>
-
-          <p className="hero-subtitle">
-            Upload a photo of a diseased crop leaf. Our engine identifies the disease,
-            <strong> measures exactly how much damage</strong> using computer vision,
-            and generates a severity-grounded treatment plan backed by agricultural extension material.
-          </p>
-
-          <div className="hero-actions">
-            <button
-              className="btn btn-primary btn-lg"
-              id="start-diagnosis-btn"
-              onClick={() => navigate('/diagnose')}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                <circle cx="12" cy="13" r="4"/>
-              </svg>
-              Start Diagnosis
-            </button>
-            <button
-              className="btn btn-secondary btn-lg"
-              id="view-history-btn"
-              onClick={() => navigate('/history')}
-            >
-              View History
-            </button>
-          </div>
-
-          {/* Backend Status */}
-          <div className="backend-status animate-fade-in" style={{ animationDelay: '400ms' }}>
-            {backendUp === null && (
-              <div className="status-item">
-                <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
-                <span>Checking backend…</span>
-              </div>
-            )}
-            {backendUp === false && (
-              <div className="status-item status-warning">
-                <span className="status-dot status-dot-red" />
-                <span>Backend offline — start it with <code>uvicorn</code></span>
-              </div>
-            )}
-            {backendUp === true && readiness && (
-              <div className="status-items">
-                <div className="status-item status-ok">
-                  <span className="status-dot status-dot-green" />
-                  <span>Backend v{readiness.version}</span>
+            {backend.status === 'offline' && (
+              <div className="callout callout-warn hero-offline" role="status">
+                <Icon name="alert" size={16} />
+                <div>
+                  <strong>Analysis server is offline.</strong> Start it from the project root:
+                  <code>.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend</code>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={backend.retry}>
+                    <Icon name="refresh" size={14} /> Check again
+                  </button>
                 </div>
-                {readiness.components.degraded.length > 0 && (
-                  <div className="status-item status-warning">
-                    <span className="status-dot status-dot-amber" />
-                    <span>{readiness.components.degraded.length} degraded</span>
-                  </div>
-                )}
               </div>
             )}
           </div>
+
+          <figure className="hero-demo card rise" style={{ animationDelay: '80ms' }}>
+            <ImageCompare original="/samples/leaf_moderate.jpg" overlay="/samples/leaf_moderate_mask.jpg" maxHeight={360} />
+            <figcaption className="hero-demo-body">
+              <div className="hero-demo-head">
+                <div>
+                  <div className="eyebrow">Sample result</div>
+                  <div className="hero-demo-pct num">16.3% <span>damaged</span></div>
+                </div>
+                <TierPill tier="moderate" />
+              </div>
+              <TissueBar severity={SAMPLE_REPORT} />
+            </figcaption>
+          </figure>
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="how-it-works container" id="how-it-works">
-        <h2 className="section-title">
-          How It <span className="gradient-text">Works</span>
-        </h2>
-        <p className="section-subtitle">
-          Four pipeline stages — from photograph to actionable treatment plan
-        </p>
+      {/* ── How it works ─────────────────────────────────────── */}
+      <section className="container home-section" id="how-it-works">
+        <div className="section-head">
+          <span className="eyebrow">How it works</span>
+          <h2>From one photo to a plan in four steps</h2>
+        </div>
+        <ol className="steps">
+          {STEPS.map((s, i) => (
+            <li key={s.title} className="card card-pad step">
+              <div className="step-top">
+                <span className="step-icon"><Icon name={s.icon} size={20} /></span>
+                <span className="step-num num">0{i + 1}</span>
+              </div>
+              <h3>{s.title}</h3>
+              <p>{s.body}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
 
-        <div className="pipeline-grid stagger">
-          <div className="pipeline-card glass-card">
-            <div className="pipeline-number">01</div>
-            <div className="pipeline-icon pipeline-icon-classify">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <polyline points="21 15 16 10 5 21"/>
-              </svg>
-            </div>
-            <h3>Disease Identification</h3>
-            <p>ResNet-50 deep learning model classifies across <strong>38 plant diseases</strong> from the PlantVillage dataset with high confidence.</p>
+      {/* ── Tiers ────────────────────────────────────────────── */}
+      <section className="container home-section" id="tier-reference">
+        <div className="section-head">
+          <span className="eyebrow">The safeguard</span>
+          <h2>The measurement decides how far the advice can go</h2>
+          <p>
+            The damaged-area percentage maps to one of five fixed action tiers. The plan can never recommend more than
+            its tier allows — so a leaf with 3% damage is never told to spray.
+          </p>
+        </div>
+        <div className="card card-pad tiers-card">
+          <TierScale />
+          <ul className="tier-list" id="tier-table">
+            {TIER_ORDER.map(t => (
+              <li key={t}>
+                <TierPill tier={t} />
+                <span className="tier-range num">
+                  {t === 'negligible' ? '< 2%' : t === 'critical' ? '≥ 50%' : `${TIER_CONFIG[t].range[0]}–${TIER_CONFIG[t].range[1]}%`}
+                </span>
+                <span className="tier-posture">{TIER_CONFIG[t].posture}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* ── Trust ────────────────────────────────────────────── */}
+      <section className="container home-section">
+        <div className="trust">
+          <div className="trust-item">
+            <Icon name="book" size={20} />
+            <h3>Every dose is cited</h3>
+            <p>Chemical recommendations must point to a retrieved source. Unsupported claims are stripped before you see them.</p>
           </div>
-
-          <div className="pipeline-card glass-card">
-            <div className="pipeline-number">02</div>
-            <div className="pipeline-icon pipeline-icon-severity">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 20V10"/>
-                <path d="M18 20V4"/>
-                <path d="M6 20v-4"/>
-              </svg>
-            </div>
-            <h3>Severity Measurement</h3>
-            <p>OpenCV counts every pixel — <strong>healthy, chlorotic, necrotic</strong> — and computes an exact damage percentage. No guessing.</p>
+          <div className="trust-item">
+            <Icon name="refresh" size={20} />
+            <h3>Degrades, never breaks</h3>
+            <p>No internet or API key? A rule-based advisor still produces a safe plan from the measured severity.</p>
           </div>
-
-          <div className="pipeline-card glass-card">
-            <div className="pipeline-number">03</div>
-            <div className="pipeline-icon pipeline-icon-rag">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                <line x1="8" y1="6" x2="16" y2="6"/>
-                <line x1="8" y1="10" x2="14" y2="10"/>
-              </svg>
-            </div>
-            <h3>Knowledge Retrieval</h3>
-            <p>RAG pipeline searches agricultural extension bulletins and IPM guides via <strong>pgvector</strong> for cited, grounded advice.</p>
-          </div>
-
-          <div className="pipeline-card glass-card">
-            <div className="pipeline-number">04</div>
-            <div className="pipeline-icon pipeline-icon-plan">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
-                <polyline points="10 9 9 9 8 9"/>
-              </svg>
-            </div>
-            <h3>Treatment Plan</h3>
-            <p>LLM synthesis constrained by the <strong>action tier</strong> — the measured severity decides what the AI can recommend. No hallucinated pesticides.</p>
+          <div className="trust-item">
+            <Icon name="database" size={20} />
+            <h3>Your reports stay with you</h3>
+            <p>History is stored on this device only. Print any report to share it with an extension officer.</p>
           </div>
         </div>
       </section>
 
-      {/* Action Tier Reference */}
-      <section className="tier-section container" id="tier-reference">
-        <h2 className="section-title">
-          Action <span className="gradient-text">Tiers</span>
-        </h2>
-        <p className="section-subtitle">
-          The measured severity maps to a hard-coded tier that constrains the advisory
-        </p>
-
-        <div className="tier-table-wrapper glass-card">
-          <table className="tier-table" id="tier-table">
-            <thead>
-              <tr>
-                <th>Severity</th>
-                <th>Tier</th>
-                <th>Mandated Posture</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><code>&lt; 2%</code></td>
-                <td><span className="badge badge-green">Negligible</span></td>
-                <td>No action. Record a baseline</td>
-              </tr>
-              <tr>
-                <td><code>2–10%</code></td>
-                <td><span className="badge badge-green">Early</span></td>
-                <td>Monitoring and cultural control only</td>
-              </tr>
-              <tr>
-                <td><code>10–25%</code></td>
-                <td><span className="badge badge-amber">Moderate</span></td>
-                <td>Targeted spot treatment, biologicals first</td>
-              </tr>
-              <tr>
-                <td><code>25–50%</code></td>
-                <td><span className="badge badge-red">Severe</span></td>
-                <td>Full chemical intervention on a label-rate schedule</td>
-              </tr>
-              <tr>
-                <td><code>&gt; 50%</code></td>
-                <td><span className="badge badge-red">Critical</span></td>
-                <td>Intervention plus a salvage/replant assessment</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* Footer */}
       <footer className="home-footer">
         <div className="container">
-          <p className="footer-disclaimer">
-            ⚠ Automated advisories are decision support, not a substitute for an agronomist.
-            Always verify actives, dosages and pre-harvest intervals against the product label
-            and your local agricultural extension service.
+          <p>
+            Decision support, not a substitute for an agronomist. Always check actives, doses and pre-harvest intervals
+            against the product label and your local agricultural extension service.
           </p>
         </div>
       </footer>

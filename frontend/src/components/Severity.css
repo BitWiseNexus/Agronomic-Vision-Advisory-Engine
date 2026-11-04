@@ -1,0 +1,115 @@
+/* ─── Severity primitives ──────────────────────────────────── */
+
+.tier-pill-lg {
+  padding: 6px 14px 6px 7px;
+  font-size: 0.925rem;
+  gap: 8px;
+}
+.tier-pill-lg .tier-pill-icon { width: 26px; height: 26px; }
+.tier-pill-lg .tier-pill-icon svg { width: 15px; height: 15px; }
+
+/* ── Tier scale ──────────────────────────────────────────────── */
+.tier-scale { width: 100%; }
+
+.tier-scale-track {
+  position: relative;
+  height: 10px;
+  margin-top: 30px;
+}
+.tier-scale-compact .tier-scale-track { margin-top: 0; height: 8px; }
+
+.tier-scale-segs {
+  display: flex;
+  gap: 2px;
+  height: 100%;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.tier-scale-seg {
+  flex: 1;
+  transition: opacity var(--t-med);
+}
+.tier-scale-seg.is-dim { opacity: 0.22; }
+
+.tier-scale-marker {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 4px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--surface);
+  animation: rise 0.6s var(--ease-out) both;
+}
+.tier-scale-marker-label {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px 7px;
+  border-radius: var(--radius-sm);
+  background: var(--text);
+  color: var(--surface);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tier-scale-labels {
+  display: flex;
+  gap: 2px;
+  margin-top: 8px;
+}
+.tier-scale-label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--text-3);
+  min-width: 0;
+}
+.tier-scale-label.is-active { color: var(--text); font-weight: 700; }
+.tier-scale-range { font-size: 0.7rem; color: var(--text-3); font-weight: 500; }
+
+@media (max-width: 480px) {
+  .tier-scale-label { font-size: 0.68rem; }
+  .tier-scale-range { font-size: 0.64rem; }
+}
+
+/* ── Tissue bar ──────────────────────────────────────────────── */
+.tissue-bar {
+  display: flex;
+  gap: 2px;
+  height: 14px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.tissue-seg { min-width: 3px; transition: flex-grow var(--t-med); }
+.tissue-seg-other { background: var(--surface-3); }
+
+.tissue-legend {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tissue-legend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.875rem;
+}
+.tissue-legend-row dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 500;
+}
+.tissue-legend-row dt .muted { font-weight: 400; font-size: 0.8rem; }
+.tissue-legend-row dd { font-weight: 650; color: var(--text); }

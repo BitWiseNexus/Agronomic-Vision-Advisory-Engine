@@ -303,17 +303,28 @@ def template_plan(
         for index, (action, timing) in enumerate(_TIER_IMMEDIATE[tier], start=1)
     ]
     if not (diagnosis.checkpoint_loaded and diagnosis.confidence_reliable):
+        # Without a checkpoint the label comes from a random head — naming it would
+        # present noise as a finding, so the step asks for an identification instead.
+        if diagnosis.checkpoint_loaded:
+            action = (
+                f"Confirm the identification of '{diagnosis.top.disease}' on "
+                f"{diagnosis.top.crop} with an extension officer before treating — the "
+                "automated diagnosis is provisional."
+            )
+            rationale = "Classifier confidence is not reliable for this image."
+        else:
+            action = (
+                "Confirm the identification of the disease with an extension officer before "
+                "treating — no trained classifier is loaded, so it was not identified automatically."
+            )
+            rationale = "Only the damage was measured; the cause is unconfirmed."
         immediate.insert(
             0,
             PlanStep(
                 order=1,  # the whole list is renumbered immediately below
-                action=(
-                    f"Confirm the identification of '{diagnosis.top.disease}' on "
-                    f"{diagnosis.top.crop} with an extension officer before treating — the "
-                    "automated diagnosis is provisional."
-                ),
+                action=action,
                 timing="before any treatment",
-                rationale="Classifier confidence is not reliable for this image.",
+                rationale=rationale,
             ),
         )
         for position, step in enumerate(immediate, start=1):
@@ -345,8 +356,13 @@ def template_plan(
     if not evidence:
         cautions.append("No knowledge-base documents matched, so this is generic tier guidance.")
 
+    subject = (
+        f"{diagnosis.top.crop}: suspected {diagnosis.top.disease.lower()}"
+        if diagnosis.checkpoint_loaded
+        else "Disease not identified (no trained classifier)"
+    )
     summary = (
-        f"{diagnosis.top.crop}: suspected {diagnosis.top.disease.lower()} with a measured "
+        f"{subject} with a measured "
         f"{severity.severity_pct:.1f} % of leaf area affected "
         f"({severity.necrotic_pct:.1f} % dead tissue, {severity.lesion_count} distinct lesions). "
         f"That places this at the {tier.value.upper()} tier — {tier.headline.lower()}."

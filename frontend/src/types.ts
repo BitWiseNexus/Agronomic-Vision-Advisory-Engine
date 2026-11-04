@@ -131,52 +131,58 @@ export interface HistoryEntry {
 }
 
 /* ─── Tier visual mapping ──────────────────────────────────── */
+export type TierIcon = 'check' | 'eye' | 'target' | 'zap' | 'siren';
+
+export const TIER_ORDER: ActionTier[] = ['negligible', 'early', 'moderate', 'severe', 'critical'];
+
 export const TIER_CONFIG: Record<ActionTier, {
   label: string;
   headline: string;
+  /** What the advisory is allowed to recommend at this tier (mirrors the backend mandate). */
+  posture: string;
+  /** Severity % range, upper bound exclusive — mirrors SeverityConfig.tier_bounds. */
+  range: [number, number];
   color: string;
-  bgColor: string;
-  borderColor: string;
-  icon: string;
+  icon: TierIcon;
 }> = {
   negligible: {
     label: 'Negligible',
     headline: 'Healthy — baseline monitoring',
-    color: '#22c55e',
-    bgColor: 'rgba(34, 197, 94, 0.12)',
-    borderColor: 'rgba(34, 197, 94, 0.3)',
-    icon: '✓',
+    posture: 'No treatment. Record a baseline and re-inspect in 7–10 days.',
+    range: [0, 2],
+    color: 'var(--tier-negligible)',
+    icon: 'check',
   },
   early: {
     label: 'Early',
     headline: 'Early stage — monitor and sanitise',
-    color: '#4ade80',
-    bgColor: 'rgba(74, 222, 128, 0.12)',
-    borderColor: 'rgba(74, 222, 128, 0.3)',
-    icon: '⬆',
+    posture: 'Monitoring and cultural control only — no blanket chemical spray.',
+    range: [2, 10],
+    color: 'var(--tier-early)',
+    icon: 'eye',
   },
   moderate: {
     label: 'Moderate',
     headline: 'Moderate — targeted treatment',
-    color: '#fbbf24',
-    bgColor: 'rgba(251, 191, 36, 0.12)',
-    borderColor: 'rgba(251, 191, 36, 0.3)',
-    icon: '⚠',
+    posture: 'Spot-treat affected plants, biologicals first; chemicals only if a cited source supports it.',
+    range: [10, 25],
+    color: 'var(--tier-moderate)',
+    icon: 'target',
   },
   severe: {
     label: 'Severe',
     headline: 'Severe — immediate intervention',
-    color: '#f87171',
-    bgColor: 'rgba(248, 113, 113, 0.12)',
-    borderColor: 'rgba(248, 113, 113, 0.3)',
-    icon: '⚡',
+    posture: 'Full chemical intervention on a label-rate schedule across the affected block.',
+    range: [25, 50],
+    color: 'var(--tier-severe)',
+    icon: 'zap',
   },
   critical: {
     label: 'Critical',
     headline: 'Critical — intervene and assess salvage',
-    color: '#ef4444',
-    bgColor: 'rgba(239, 68, 68, 0.12)',
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-    icon: '🚨',
+    posture: 'Intervene immediately and decide whether to treat or remove and replant.',
+    range: [50, 100],
+    color: 'var(--tier-critical)',
+    icon: 'siren',
   },
 };

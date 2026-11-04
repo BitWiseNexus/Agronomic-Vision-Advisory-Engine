@@ -1,51 +1,99 @@
-/* ─── Navbar ───────────────────────────────────────────────── */
+/* ─── Navbar — top bar on desktop, bottom tab bar on phones ── */
 
 import { NavLink } from 'react-router-dom';
+import { useBackend, useTheme } from '../hooks';
+import Icon, { type IconName } from './Icon';
 import './Navbar.css';
 
-export default function Navbar() {
+const LINKS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
+  { to: '/', label: 'Home', icon: 'home', end: true },
+  { to: '/diagnose', label: 'Diagnose', icon: 'camera' },
+  { to: '/history', label: 'History', icon: 'history' },
+];
+
+function BackendStatus() {
+  const backend = useBackend();
+  const { label, tone, title } =
+    backend.status === 'checking'
+      ? { label: 'Connecting', tone: 'checking', title: 'Checking the analysis server…' }
+      : backend.status === 'offline'
+        ? { label: 'Offline', tone: 'offline', title: 'Analysis server unreachable — click to retry' }
+        : backend.readiness.components.degraded.length > 0
+          ? {
+              label: 'Limited',
+              tone: 'limited',
+              title: `Running with fallbacks:\n• ${backend.readiness.components.degraded.join('\n• ')}`,
+            }
+          : { label: 'Online', tone: 'online', title: 'All components ready' };
+
   return (
-    <nav className="navbar" id="main-nav">
-      <NavLink to="/" className="navbar-brand">
-        <div className="brand-icon">
-          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path
-              d="M16 2C9 6 4 14 5 24c0 0 3-2 7-3 0-6 2-12 8-16C17 7 15 12 14 18c3-.5 6-.5 9 0 2-8-1-14-7-16z"
-              fill="#22c55e"
-              stroke="#166534"
-              strokeWidth="1"
-              strokeLinejoin="round"
-            />
-          </svg>
+    <button
+      type="button"
+      className={`status-chip status-${tone}`}
+      title={title}
+      onClick={backend.status === 'offline' ? backend.retry : undefined}
+      aria-label={`Server status: ${label}. ${title}`}
+    >
+      <span className="status-chip-dot" />
+      <span className="status-chip-label">{label}</span>
+    </button>
+  );
+}
+
+export default function Navbar() {
+  const { effective, toggle } = useTheme();
+
+  return (
+    <>
+      <header className="navbar no-print">
+        <div className="navbar-inner container">
+          <NavLink to="/" className="navbar-brand" aria-label="AgroVision home">
+            <img src="/leaf.svg" alt="" width="30" height="30" />
+            <span>AgroVision</span>
+          </NavLink>
+
+          <nav className="navbar-links" aria-label="Main">
+            {LINKS.map(link => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.end}
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              >
+                <Icon name={link.icon} size={17} />
+                <span>{link.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="navbar-tools">
+            <BackendStatus />
+            <button
+              type="button"
+              className="btn btn-ghost btn-icon"
+              onClick={toggle}
+              aria-label={`Switch to ${effective === 'dark' ? 'light' : 'dark'} theme`}
+              title={`Switch to ${effective === 'dark' ? 'light' : 'dark'} theme`}
+            >
+              <Icon name={effective === 'dark' ? 'sun' : 'moon'} size={18} />
+            </button>
+          </div>
         </div>
-        <span className="brand-text">AgroVision</span>
-      </NavLink>
+      </header>
 
-      <div className="navbar-links">
-        <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} end>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
-          <span>Home</span>
-        </NavLink>
-
-        <NavLink to="/diagnose" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-            <circle cx="12" cy="13" r="4"/>
-          </svg>
-          <span>Diagnose</span>
-        </NavLink>
-
-        <NavLink to="/history" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
-          </svg>
-          <span>History</span>
-        </NavLink>
-      </div>
-    </nav>
+      <nav className="tabbar no-print" aria-label="Main">
+        {LINKS.map(link => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            end={link.end}
+            className={({ isActive }) => `tab-link ${isActive ? 'active' : ''}`}
+          >
+            <Icon name={link.icon} size={22} />
+            <span>{link.label}</span>
+          </NavLink>
+        ))}
+      </nav>
+    </>
   );
 }

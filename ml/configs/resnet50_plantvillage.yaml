@@ -4,26 +4,33 @@
 
 data_dir: data/raw/plantvillage
 output_path: models/checkpoints/resnet50_plantvillage.pt
+# Stratified 70 / 15 / 15. Val picks the best epoch and fits the calibration temperature;
+# test is held out for ml/evaluate.py and is the number to report.
 val_split: 0.15
+test_split: 0.15
 image_size: 224
 batch_size: 32
-num_workers: 4
+num_workers: 6
 seed: 42
 
 # Stage 1 — backbone frozen, train the new 38-class head only. Cheap and stabilises
 # the randomly-initialised head before it can wreck the pretrained features.
-epochs_head: 3
+epochs_head: 2
 lr_head: 0.001
 
 # Stage 2 — unfreeze layer4 (and layer3 if unfreeze_layer3) and fine-tune at a low LR.
-# Unfreezing everything on a lab-clean dataset overfits fast and gains little.
-epochs_finetune: 7
+# Unfreezing everything on a lab-clean dataset overfits fast and gains little; layer3 is
+# the middle ground — it adapts mid-level texture features (lesion margins, mottling).
+epochs_finetune: 6
 lr_finetune: 0.0001
-unfreeze_layer3: false
+unfreeze_layer3: true
 
 weight_decay: 0.0001
 label_smoothing: 0.05
 grad_clip: 1.0
+# sqrt-inverse-frequency loss weights: lifts the 150-400 image classes without
+# sacrificing the 5,000-image ones. none | sqrt | inverse
+class_weighting: sqrt
 
 # Augmentation. Colour jitter matters more than geometry here: PlantVillage is shot
 # under uniform lab lighting, and without heavy photometric augmentation the model
@@ -41,5 +48,9 @@ augment:
   blur_probability: 0.15
   erasing_probability: 0.15
 
-amp: true          # mixed precision; ignored on CPU
+# Mixed precision and channels-last memory layout only pay off on GPUs with tensor cores
+# (RTX 20xx and newer). On a GTX 1650 they made training 8x SLOWER (8 vs 66 img/s), so
+# both are off by default. Turn them on for an RTX card or a Colab T4.
+amp: false
+channels_last: false
 early_stop_patience: 3

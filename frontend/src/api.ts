@@ -1,7 +1,8 @@
 /* ─── API Client ───────────────────────────────────────────────
    Thin wrapper over fetch for the FastAPI backend.
-   Base URL defaults to localhost:8000 for dev, configurable via
-   VITE_API_URL environment variable.
+   In dev the Vite proxy forwards /api to the backend, so the
+   default base is same-origin. Set VITE_API_URL to call a backend
+   on another origin (e.g. a deployed build).
    ──────────────────────────────────────────────────────────── */
 
 import type {
@@ -13,16 +14,20 @@ import type {
   SeverityReport,
 } from './types';
 
-const API_BASE =
+const API_BASE: string = (
   import.meta.env.VITE_API_URL ??
   import.meta.env.VITE_API_BASE_URL ??
-  'http://localhost:8000';
+  ''
+).replace(/\/$/, '');
 const PREFIX = API_BASE.endsWith('/api/v1') ? API_BASE : `${API_BASE}/api/v1`;
 
 class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  status: number;
+
+  constructor(status: number, message: string) {
     super(message);
     this.name = 'ApiError';
+    this.status = status;
   }
 }
 
@@ -31,22 +36,33 @@ async function handleResponse<T>(res: Response): Promise<T> {
     let detail = res.statusText;
     try {
       const body = await res.json();
-      detail = body.detail ?? JSON.stringify(body);
+      detail = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail ?? body);
     } catch { /* ignore parse errors */ }
-    throw new ApiError(res.status, detail);
+    // The Vite proxy answers 5xx with an empty body when the backend is down.
+    if (res.status >= 500 && !detail) detail = 'The analysis server is not responding.';
+    throw new ApiError(res.status, detail || `Request failed (${res.status})`);
   }
   return res.json() as Promise<T>;
+}
+
+/** fetch() rejects with an opaque TypeError when the server is unreachable. */
+async function request(input: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch {
+    throw new ApiError(0, 'Cannot reach the analysis server. Is the backend running on port 8000?');
+  }
 }
 
 /* ── Health / Readiness ─────────────────────────────────────── */
 
 export async function getHealth(): Promise<HealthResponse> {
-  const res = await fetch(`${PREFIX}/health`);
+  const res = await request(`${PREFIX}/health`);
   return handleResponse<HealthResponse>(res);
 }
 
 export async function getReadiness(): Promise<ReadinessResponse> {
-  const res = await fetch(`${PREFIX}/readiness`);
+  const res = await request(`${PREFIX}/readiness`);
   return handleResponse<ReadinessResponse>(res);
 }
 
@@ -61,7 +77,7 @@ export async function postDiagnose(
   form.append('image', imageFile);
   form.append('environment', JSON.stringify(environment));
 
-  const res = await fetch(`${PREFIX}/diagnose?debug=${debug}`, {
+  const res = await request(`${PREFIX}/diagnose?debug=${debug}`, {
     method: 'POST',
     body: form,
   });
@@ -74,7 +90,7 @@ export async function postSeverity(imageFile: File): Promise<SeverityReport> {
   const form = new FormData();
   form.append('image', imageFile);
 
-  const res = await fetch(`${PREFIX}/severity`, {
+  const res = await request(`${PREFIX}/severity`, {
     method: 'POST',
     body: form,
   });
@@ -87,7 +103,7 @@ export async function postSeverityOverlay(imageFile: File): Promise<OverlayRespo
   const form = new FormData();
   form.append('image', imageFile);
 
-  const res = await fetch(`${PREFIX}/severity/overlay`, {
+  const res = await request(`${PREFIX}/severity/overlay`, {
     method: 'POST',
     body: form,
   });

@@ -37,9 +37,11 @@ test half larger than the train half, so it is not a drop-in 80/20.
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -115,6 +117,31 @@ def verify() -> bool:
     return total > 0
 
 
+def _move_with_retry(source: Path, destination: Path, attempts: int = 20) -> None:
+    """Move a class folder, tolerating transient Windows file locks.
+
+    Antivirus and the search indexer briefly lock freshly written files, which makes a
+    directory rename fail with WinError 5/32 part-way through 54k images. Retry the rename,
+    then fall back to moving file by file, retrying each.
+    """
+    for attempt in range(attempts):
+        try:
+            os.rename(source, destination)
+            return
+        except PermissionError:
+            time.sleep(0.5 * (attempt + 1))
+    destination.mkdir(parents=True, exist_ok=True)
+    for item in source.iterdir():
+        for attempt in range(attempts):
+            try:
+                shutil.move(str(item), str(destination / item.name))
+                break
+            except PermissionError:
+                time.sleep(0.5 * (attempt + 1))
+        else:
+            raise PermissionError(f"Could not move {item} — close programs using it and re-run.")
+
+
 def download_github(variant: str = "color", keep_staging: bool = False) -> None:
     """Shallow, blobless, sparse clone of just `raw/<variant>`."""
     if shutil.which("git") is None:
@@ -152,7 +179,7 @@ def download_github(variant: str = "color", keep_staging: bool = False) -> None:
         if destination.exists():
             skipped += 1
             continue
-        shutil.move(str(class_dir), str(destination))
+        _move_with_retry(class_dir, destination)
         moved += 1
 
     print(f"Moved {moved} class folders into {TARGET}" + (f" ({skipped} already present)" if skipped else ""))

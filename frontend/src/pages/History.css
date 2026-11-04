@@ -1,185 +1,112 @@
 /* ─── History page styles ──────────────────────────────────── */
 
-.history-page {
-  padding: 32px 20px 60px;
-  min-height: calc(100vh - 64px);
-}
+.back-btn { margin: -8px 0 12px -10px; }
 
-/* ── Header ──────────────────────────────────────────────────── */
-.history-header {
+.history-actions { display: flex; align-items: center; }
+.confirm {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 32px;
+  gap: 6px;
+  font-size: 0.875rem;
+  color: var(--text-2);
 }
 
-.history-header h2 {
-  font-size: 1.6rem;
+.trend-card { margin-bottom: 20px; }
+
+.filter-chips { margin-bottom: 16px; }
+
+.history-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
 }
 
-.history-subtitle {
-  color: var(--text-dim);
-  font-size: 0.85rem;
+.history-card {
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow var(--t-fast), transform var(--t-fast), border-color var(--t-fast);
+}
+.history-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); }
+
+.history-card-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.history-thumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--surface-2);
+}
+.history-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.history-thumb-tier { position: absolute; left: 10px; bottom: 10px; }
+.history-thumb-tier .tier-pill { background: var(--surface); box-shadow: var(--shadow-sm); }
+
+.history-info { padding: 12px 14px 14px; }
+.history-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.history-title {
+  font-weight: 650;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-pct { font-weight: 750; font-size: 1.05rem; color: var(--text); }
+.history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
   margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--text-3);
 }
+.history-meta span { display: inline-flex; align-items: center; gap: 4px; }
 
-.confirm-clear {
+.history-card-tools {
+  position: absolute;
+  top: 8px;
+  right: 8px;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  gap: 4px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
-/* ── Empty State ─────────────────────────────────────────────── */
-.history-empty {
+/* ── Empty ───────────────────────────────────────────────────── */
+.empty {
+  max-width: 520px;
+  margin: 40px auto 0;
+  padding: 40px 28px;
+  text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-height: 50vh;
-  text-align: center;
-  gap: 16px;
 }
-
 .empty-icon {
-  color: var(--text-dim);
-  opacity: 0.4;
-  margin-bottom: 8px;
-}
-
-.history-empty h2 {
-  font-size: 1.4rem;
-  color: var(--text-secondary);
-}
-
-.history-empty p {
-  color: var(--text-dim);
-  max-width: 360px;
-  font-size: 0.9rem;
-}
-
-/* ── Grid ────────────────────────────────────────────────────── */
-.history-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 14px;
+  border-radius: 16px;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
+.empty h1 { font-size: 1.4rem; }
+.empty p { margin: 8px 0 22px; color: var(--text-2); }
 
-/* ── Card ────────────────────────────────────────────────────── */
-.history-card {
-  cursor: pointer;
-  overflow: hidden;
-  transition: all var(--transition-medium);
-}
-
-.history-card:hover {
-  transform: translateY(-2px);
-}
-
-.history-card-image {
-  position: relative;
-  height: 160px;
-  overflow: hidden;
-}
-
-.history-card-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform var(--transition-medium);
-}
-
-.history-card:hover .history-card-image img {
-  transform: scale(1.05);
-}
-
-.history-card-tier {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid;
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  backdrop-filter: blur(8px);
-}
-
-.history-card-info {
-  padding: 14px 16px;
-}
-
-.history-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.history-card-crop {
-  display: block;
-  font-size: 0.7rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 600;
-}
-
-.history-card-disease {
-  display: block;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-top: 2px;
-}
-
-.history-card-severity {
-  font-family: var(--font-mono);
-  font-weight: 800;
-  font-size: 1.2rem;
-  flex-shrink: 0;
-}
-
-.history-card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border-subtle);
-}
-
-.history-card-date {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-}
-
-/* ── Detail View ─────────────────────────────────────────────── */
-.history-detail {
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-.history-detail-meta {
-  margin: 12px 0 20px;
-}
-
-.history-detail-date {
-  font-size: 0.85rem;
-  color: var(--text-dim);
-}
-
-@media (max-width: 768px) {
-  .history-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .history-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
+@media (max-width: 720px) {
+  .history-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .history-info { padding: 10px 12px 12px; }
+  .history-title { font-size: 0.875rem; }
+  .history-pct { font-size: 0.95rem; }
+  .history-thumb-tier { left: 6px; bottom: 6px; }
+  .history-thumb-tier .tier-pill { font-size: 0.72rem; padding: 2px 8px 2px 3px; }
 }

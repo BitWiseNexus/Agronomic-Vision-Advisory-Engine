@@ -136,12 +136,54 @@ curl -X POST http://localhost:8000/api/v1/diagnose \
 | 25–50 | `severe` | Full chemical intervention on a label-rate schedule |
 | > 50 | `critical` | Intervention plus a salvage/replant assessment |
 
-How it is computed: resize and bilateral-denoise → segment the leaf → white balance *using
-the background the segmentation just found* → classify each leaf pixel as healthy green,
-chlorotic or necrotic → area ratios, lesion count, largest lesion.
+How it is computed: resize and bilateral-denoise → segment the leaf, removing background and
+the leaf's cast shadow → white balance *using the background the segmentation just found* →
+classify each leaf pixel as healthy green, chlorotic or necrotic (glare excluded) → area
+ratios, lesion count, largest lesion.
 
-Accuracy against synthetic ground truth over 0–70 % damage: **mean absolute error 0.54 pp**
-(max 0.84), and within ~1 pp under a warm colour cast or a soil background.
+### Measured accuracy
+
+`ml/benchmark_severity.py` renders leaves at known damage (0–65 %) and photographs them
+"badly" under 16 conditions — colour casts, exposure errors, shadow, blur, JPEG, four
+backgrounds, macro framing, natural tissue colour variation. Tier accuracy is the headline
+because the tier is what constrains the treatment plan.
+
+| | before | after |
+|---|---|---|
+| mean absolute error, all 16 conditions | 1.98 pp | **0.50 pp** |
+| correct action tier | 91 % | **99 %** |
+| worst condition | cool shade, −8.5 pp (57 % tier) | grey lesions, −4.1 pp (90 % tier) |
+
+Synthetic leaves cannot reveal everything, so the engine was also run on **real PlantVillage
+photos** (25 per class). Healthy leaves have ~0 % true damage, which makes them a ground
+truth that needs no annotation:
+
+| real leaves | before | after |
+|---|---|---|
+| healthy leaves read as *moderate or worse* (false alarm) | 25 % | **10 %** |
+| median reading on healthy leaves | 2.4 % | **0.9 %** |
+
+The fixes, each traced to a measured failure:
+
+- **Cast shadows were counted as dead tissue.** On real photos the leaf's shadow on the
+  tray is saturated enough to join the leaf mask; it then read as necrosis — a quarter of
+  healthy leaves were flagged moderate+, and diseased leaves were inflated by background
+  (a 60 % reading on a leaf that was ~1 % damaged). The background colour is now estimated
+  from the frame border, and pixels with the *same chromaticity at the same brightness or
+  darker* — background and shadow — are excluded before segmentation.
+- **Blue skylight shade under-reported chlorosis by up to 21 pp.** The white-balance guard
+  rejected the cast as "a coloured background". Blue-dominant casts are now trusted further:
+  natural backgrounds are warm or green, almost never blue.
+- **Overexposed yellowing counted as healthy.** Clipped yellow becomes hue 30, where the
+  green band used to start; the band now starts at 33 (66°).
+- **Grey pixels have random hue**, so the brown test fired on grey background slivers and
+  missed grey/black dead tissue. Colourless pixels are now classified by brightness: bright
+  = glare (excluded from the leaf area), dark = necrotic.
+
+Remaining known limits: grey lesions *on the leaf margin* are colour-identical to a grey tray
+and are cut off with the background; olive-brown lesions (e.g. potato late blight) are only
+partly counted; subtle mosaic mottling barely registers. Overlapping leaves in field clutter
+defeat largest-component segmentation — a learned segmentation model is the real answer there.
 
 Two design decisions carry that robustness, and both came out of measurement rather than
 intuition:
@@ -158,8 +200,8 @@ intuition:
   chlorotic tissue outranks the background. Both fail because the subject is the strongest
   colour present. Estimating the illuminant from the *non-subject* pixels avoids it.
 
-[`notebooks/01_severity_lab.ipynb`](notebooks/01_severity_lab.ipynb) reproduces all of this,
-including the failure modes that remain (blue cast −8.9 pp, overexposure −7.9 pp).
+[`notebooks/01_severity_lab.ipynb`](notebooks/01_severity_lab.ipynb) is the interactive
+workbench for this; `ml/benchmark_severity.py` is the reproducible scorecard.
 
 ## Dataset
 

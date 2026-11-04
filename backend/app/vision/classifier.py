@@ -50,6 +50,9 @@ class DiseaseClassifier:
         self._torch = torch
 
         self.model = build_model(len(self.classes), pretrained=pretrained_backbone)
+        # Softmax temperature fitted on validation data at training time (ml/train.py).
+        # 1.0 = uncalibrated, which is what an older checkpoint without one gets.
+        self.temperature = 1.0
         self.status = self._load_checkpoint()
         self.model.to(self.device).eval()
 
@@ -74,7 +77,14 @@ class DiseaseClassifier:
                 if len(self.classes) != self.model.fc.out_features:
                     self.model = build_model(len(self.classes), pretrained=False)
             self.model.load_state_dict(state)
-            log.info("Loaded checkpoint %s (%d classes)", path.name, len(self.classes))
+            if isinstance(blob, dict) and blob.get("temperature"):
+                self.temperature = float(blob["temperature"])
+            log.info(
+                "Loaded checkpoint %s (%d classes, T=%.3f)",
+                path.name,
+                len(self.classes),
+                self.temperature,
+            )
             return ClassifierStatus(True, str(path), self.device)
         except Exception as exc:  # a corrupt checkpoint must not take the API down
             log.error("Checkpoint at %s failed to load (%s); using untrained head", path, exc)
@@ -82,10 +92,18 @@ class DiseaseClassifier:
 
     # -- inference -----------------------------------------------------------
     def predict_proba(self, bgr: np.ndarray) -> np.ndarray:
+        """Calibrated class probabilities.
+
+        With test-time augmentation the photo and its mirror image are scored in one
+        batch and their probabilities averaged: a leaf's disease does not depend on which
+        way it faces, so disagreement between the two views is noise worth averaging out.
+        """
         tensor = to_classifier_tensor(bgr).to(self.device)
+        if self.settings.classifier_tta:
+            tensor = self._torch.cat([tensor, self._torch.flip(tensor, dims=[3])])
         with self._torch.no_grad():
-            logits = self.model(tensor)
-            probs = self._torch.softmax(logits, dim=1)[0]
+            logits = self.model(tensor) / self.temperature
+            probs = self._torch.softmax(logits, dim=1).mean(dim=0)
         return probs.detach().cpu().numpy()
 
     def predict(self, bgr: np.ndarray, top_k: int = 3) -> Diagnosis:

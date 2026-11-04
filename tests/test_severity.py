@@ -169,3 +169,66 @@ def test_border_background_fraction_distinguishes_the_two_cases() -> None:
     interior_hole = np.full((60, 60), 255, dtype=np.uint8)
     interior_hole[25:35, 25:35] = 0  # a lesion carved out of a full-frame subject
     assert _border_background_fraction(interior_hole) == pytest.approx(0.0)
+
+
+# --- measurement accuracy under photo conditions ------------------------------
+#
+# Each of these was a measured failure in ml/benchmark_severity.py, and three of the four
+# UNDER-reported damage — the dangerous direction, since a lower tier permits less treatment.
+
+
+def _truth_pct(leaf) -> float:
+    return leaf.true_damaged_fraction * 100
+
+
+def test_cool_shade_keeps_chlorosis() -> None:
+    """Blue skylight pushed the tray past the white-balance guard (spread 0.36), so the cast
+    stayed and yellowing slid into the green band: -8.5 pp on average, -21 pp at worst."""
+    leaf = make_leaf(damaged_fraction=0.30, lesion_count=18, seed=11)
+    report, _ = analyse(_tint(leaf.image, (1.25, 1.02, 0.8)))
+    assert report.severity_pct == pytest.approx(_truth_pct(leaf), abs=2.0)
+    assert report.chlorotic_pct > 5.0
+
+
+def test_overexposed_yellow_is_not_counted_as_healthy() -> None:
+    """Clipped yellow becomes pure yellow (hue 30), which the healthy band used to start at."""
+    leaf = make_leaf(damaged_fraction=0.30, lesion_count=18, seed=11)
+    report, _ = analyse(_tint(leaf.image, (1.5, 1.5, 1.5)))
+    assert report.severity_pct == pytest.approx(_truth_pct(leaf), abs=2.0)
+
+
+def test_blown_out_leaf_warns() -> None:
+    leaf = make_leaf(damaged_fraction=0.20, lesion_count=12, seed=11)
+    report, _ = analyse(_tint(leaf.image, (2.4, 2.4, 2.4)))
+    assert any("blown out" in w for w in report.quality_warnings)
+
+
+def test_grey_dead_tissue_counts_as_necrotic() -> None:
+    """Grey/black necrosis has no meaningful hue; it used to fall through every class.
+
+    Known limit: a grey lesion that reaches the leaf margin is colour-ambiguous with a grey
+    tray, so the leaf mask cuts it off and that part goes uncounted. Growing the mask into
+    adjacent dark regions would fix it but also swallow cast shadows beside the leaf — a far
+    commoner case — so the tolerance here is wider than for coloured lesions.
+    """
+    leaf = make_leaf(damaged_fraction=0.30, lesion_count=18, seed=11)
+    image = leaf.image.copy()
+    core = (leaf.lesion_mask > 0) & (leaf.image[:, :, 2] < 150)
+    image[core] = (70, 72, 78)
+    report, _ = analyse(image)
+    assert report.severity_pct == pytest.approx(_truth_pct(leaf), abs=7.0)
+    assert report.necrotic_pct > 8.0
+
+
+def test_grey_background_is_not_read_as_brown() -> None:
+    """Grey pixels have effectively random hue, so a hue-only brown test counted background
+    slivers in a full-frame shot as necrosis (+5.9 pp). Bright achromatic pixels are now
+    excluded from the leaf instead."""
+    leaf = make_leaf(damaged_fraction=0.30, lesion_count=18, seed=11)
+    ys, xs = np.nonzero(leaf.leaf_mask)
+    sl = (slice(ys.min() + 40, ys.max() - 40), slice(xs.min() + 4, xs.max() - 4))
+    lesion, body = leaf.lesion_mask[sl] > 0, leaf.leaf_mask[sl] > 0
+    truth = 100.0 * (lesion & body).sum() / body.sum()
+
+    report, _ = analyse(leaf.image[sl])
+    assert report.severity_pct == pytest.approx(truth, abs=2.0)

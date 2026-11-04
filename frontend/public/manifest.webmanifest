@@ -1,0 +1,12 @@
+{
+  "name": "AgroVision — Crop Disease Advisory",
+  "short_name": "AgroVision",
+  "description": "Photograph a diseased leaf and get a severity-grounded treatment plan.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f6f1",
+  "theme_color": "#15603a",
+  "icons": [
+    { "src": "/leaf.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

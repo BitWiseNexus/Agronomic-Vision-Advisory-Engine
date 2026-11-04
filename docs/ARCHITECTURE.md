@@ -54,9 +54,10 @@ Minor Project/
 │
 ├─ ml/
 │  ├─ configs/resnet50_plantvillage.yaml
-│  ├─ datasets.py                  ImageFolder + augmentation policy
-│  ├─ train.py                     two-stage transfer learning
-│  └─ evaluate.py                  confusion matrix, per-class F1
+│  ├─ datasets.py                  ImageFolder, stratified train/val/test split, augmentation
+│  ├─ train.py                     two-stage transfer learning + temperature calibration
+│  ├─ evaluate.py                  held-out test: accuracy, per-class F1, calibration, robustness
+│  └─ benchmark_severity.py        severity index vs. known damage under 16 photo conditions
 │
 ├─ data/
 │  ├─ raw/                         PlantVillage (gitignored, ~1.6 GB)

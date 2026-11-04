@@ -39,22 +39,41 @@ class SeverityConfig:
     max_leaf_fraction: float = 0.92
     # ...and the region it excludes must really be at the frame edge. See segment_leaf.
     min_border_background: float = 0.5
+    # Shadow / background removal: pixels whose chromaticity (colour independent of
+    # brightness) matches the background, at the same brightness or darker, are background
+    # or the leaf's cast shadow. Tolerance is in normalised-rgb units; dark pixels get extra
+    # slack because their chromaticity is dominated by sensor noise.
+    background_chroma_tol: float = 0.035
+    background_chroma_dark_slack: float = 1.6  # added as slack / (V + 10)
+    background_max_brightness: float = 1.15  # x background brightness
 
     # --- healthy green ---
-    green_hue_lo: int = 30
+    # Pure yellow sits at hue 30 (60 deg). Starting "healthy" there meant saturated
+    # yellowing — and any yellow clipped to (255, 255, x) by overexposure — was counted as
+    # green tissue. Healthy foliage sits well above 66 deg, so the band starts at 33.
+    green_hue_lo: int = 33
     green_hue_hi: int = 92
     green_min_saturation: int = 45
     green_min_value: int = 35
 
     # --- chlorotic (yellowing) ---
     yellow_hue_lo: int = 18
-    yellow_hue_hi: int = 30
+    yellow_hue_hi: int = 32
     yellow_min_saturation: int = 60
 
     # --- necrotic (brown / dead / dark lesion) ---
     brown_hue_hi: int = 18  # 0..18 -> red-brown
     brown_hue_wrap_lo: int = 165  # 165..179 -> the other side of red
     dark_value_max: int = 55  # very dark pixels are dead tissue or deep shadow
+
+    # --- achromatic pixels inside the leaf ---
+    # Hue is meaningless below this saturation (grey pixels have effectively random hue),
+    # so the brown test must not fire on them. They are classified by brightness instead:
+    achromatic_max_saturation: int = 40
+    # ...bright and colourless is not tissue at all — specular glare, or background slivers
+    # when the whole frame is measured — and is left out of the leaf area entirely;
+    glare_min_value: int = 150
+    # ...while darker grey/black is dead tissue (grey mould, collapsed necrotic patches).
 
     # --- lesion morphology ---
     lesion_noise_floor_frac: float = 0.0005  # 0.05 % of leaf area
@@ -109,15 +128,62 @@ def _fill_holes(mask: np.ndarray) -> np.ndarray:
     return filled
 
 
+def _background_like(bgr: np.ndarray, config: SeverityConfig) -> np.ndarray | None:
+    """Pixels that look like the background or a shadow cast on it.
+
+    The background colour is estimated from a thin band around the frame edge. A shadow
+    lowers brightness but keeps the surface's chromaticity, so "same chromaticity, same
+    brightness or darker" catches both the background and the leaf's cast shadow — which
+    on real PlantVillage photos is saturated enough to pass the saturation gate, joins the
+    leaf mask, and was then counted as necrotic tissue (a quarter of healthy leaves read as
+    moderate damage or worse).
+
+    Returns None when the border does not look like a uniform background: a macro shot
+    whose border is leaf, or clutter too varied to model.
+    """
+    band = 4
+    border = np.concatenate(
+        [bgr[:band].reshape(-1, 3), bgr[-band:].reshape(-1, 3),
+         bgr[:, :band].reshape(-1, 3), bgr[:, -band:].reshape(-1, 3)]
+    ).astype(np.float32)
+    border_hsv = cv2.cvtColor(border.astype(np.uint8)[None], cv2.COLOR_BGR2HSV)[0]
+    border_is_leaf = (
+        np.median(border_hsv[:, 1]) >= config.green_min_saturation
+        and config.green_hue_lo <= np.median(border_hsv[:, 0]) <= config.green_hue_hi
+    )
+    if border_is_leaf:
+        return None
+
+    def chroma(pixels: np.ndarray) -> np.ndarray:
+        return pixels[..., 1:] / (pixels.sum(axis=-1, keepdims=True) + 1.0)  # (g, r) share
+
+    border_chroma = chroma(border)
+    reference = np.median(border_chroma, axis=0)
+    # A cluttered border (soil, gravel, other leaves) has no single background colour.
+    spread = np.median(np.linalg.norm(border_chroma - reference, axis=1))
+    if spread > config.background_chroma_tol:
+        return None
+
+    image = bgr.astype(np.float32)
+    distance = np.linalg.norm(chroma(image) - reference, axis=-1)
+    brightness = image.max(axis=-1)
+    background_v = float(np.median(border.max(axis=1)))
+    tolerance = config.background_chroma_tol + config.background_chroma_dark_slack / (brightness + 10.0)
+    return (distance < tolerance) & (brightness <= background_v * config.background_max_brightness)
+
+
 def _saturation_mask(
-    saturation: np.ndarray, value: np.ndarray, threshold: int, config: SeverityConfig
+    saturation: np.ndarray,
+    value: np.ndarray,
+    threshold: int,
+    config: SeverityConfig,
+    exclude: np.ndarray | None = None,
 ) -> np.ndarray:
     """One threshold, cleaned up: gate, morphological open/close, largest blob, fill holes."""
-    mask = (
-        (saturation >= threshold)
-        & (value >= config.leaf_min_value)
-        & (value <= config.leaf_max_value)
-    ).astype(np.uint8) * 255
+    gate = (saturation >= threshold) & (value >= config.leaf_min_value) & (value <= config.leaf_max_value)
+    if exclude is not None:
+        gate &= ~exclude
+    mask = gate.astype(np.uint8) * 255
 
     kernel = cv2.getStructuringElement(
         cv2.MORPH_ELLIPSE, (config.morph_kernel, config.morph_kernel)
@@ -172,9 +238,10 @@ def segment_leaf(bgr: np.ndarray, config: SeverityConfig = DEFAULT_CONFIG) -> np
     if int(otsu_threshold) > config.leaf_min_saturation:
         thresholds.append(int(otsu_threshold))
 
+    background = _background_like(bgr, config)
     accepted: list[tuple[float, np.ndarray]] = []
     for threshold in thresholds:
-        mask = _saturation_mask(saturation, value, threshold, config)
+        mask = _saturation_mask(saturation, value, threshold, config, background)
         area_fraction = float((mask > 0).sum()) / frame_area
         if not config.min_leaf_fraction <= area_fraction <= config.max_leaf_fraction:
             continue
@@ -195,10 +262,13 @@ def segment_leaf(bgr: np.ndarray, config: SeverityConfig = DEFAULT_CONFIG) -> np
 
 def _tissue_masks(
     bgr: np.ndarray, leaf: np.ndarray, config: SeverityConfig
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Per-pixel tissue classes, plus the *measurable* leaf: the leaf mask minus glare."""
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
     hue, saturation, value = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
-    inside = leaf > 0
+    achromatic = saturation < config.achromatic_max_saturation
+    glare = achromatic & (value >= config.glare_min_value)
+    inside = (leaf > 0) & ~glare
 
     healthy = (
         inside
@@ -217,11 +287,13 @@ def _tissue_masks(
         & (value >= config.dark_value_max)
     )
 
-    brownish = (hue <= config.brown_hue_hi) | (hue >= config.brown_hue_wrap_lo)
-    necrotic = inside & ~healthy & ~chlorotic & (brownish | (value < config.dark_value_max))
+    brownish = ~achromatic & ((hue <= config.brown_hue_hi) | (hue >= config.brown_hue_wrap_lo))
+    necrotic = inside & ~healthy & ~chlorotic & (
+        brownish | (value < config.dark_value_max) | achromatic  # glare already excluded
+    )
 
     to_u8 = lambda m: m.astype(np.uint8) * 255  # noqa: E731
-    return to_u8(healthy), to_u8(chlorotic), to_u8(necrotic)
+    return to_u8(healthy), to_u8(chlorotic), to_u8(necrotic), to_u8(inside)
 
 
 def _lesion_stats(
@@ -296,7 +368,25 @@ def analyse(
         )
         return report, SeverityMasks(working, leaf, empty, empty, empty, empty)
 
-    healthy, chlorotic, necrotic = _tissue_masks(working, leaf, config)
+    healthy, chlorotic, necrotic, measurable = _tissue_masks(working, leaf, config)
+    # Ratios are taken over the measurable leaf, so glare and background slivers neither
+    # count as damage nor dilute it.
+    leaf_area = int((measurable > 0).sum())
+    if leaf_area == 0:
+        empty = np.zeros_like(leaf)
+        report = SeverityReport(
+            severity_pct=0.0,
+            necrotic_pct=0.0,
+            chlorotic_pct=0.0,
+            healthy_pct=0.0,
+            lesion_count=0,
+            largest_lesion_pct=0.0,
+            leaf_coverage_pct=0.0,
+            action_tier=ActionTier.NEGLIGIBLE,
+            quality_warnings=["The leaf is washed out by glare — retake the photo out of direct sun."],
+        )
+        return report, SeverityMasks(working, leaf, empty, empty, empty, empty)
+
     lesions_raw = cv2.bitwise_or(chlorotic, necrotic)
     lesion_count, largest_lesion_pct, lesions = _lesion_stats(lesions_raw, leaf_area, config)
 
@@ -306,7 +396,7 @@ def analyse(
     necrotic_pct = pct(necrotic)
     severity_pct = min(chlorotic_pct + necrotic_pct, 100.0)
 
-    coverage_pct = 100.0 * leaf_area / frame_area
+    coverage_pct = 100.0 * float((leaf > 0).sum()) / frame_area
     if coverage_pct < 8:
         warnings.append(
             f"Leaf fills only {coverage_pct:.0f} % of the frame — move closer; "
@@ -322,6 +412,12 @@ def analyse(
         warnings.append("Image is underexposed; dark pixels can be mis-read as necrosis.")
     if float(grey[leaf > 0].std()) < 8:
         warnings.append("Very low contrast on the leaf — thresholds may be unstable.")
+    clipped = float((working[leaf > 0].max(axis=1) >= 250).mean())
+    if clipped > 0.25:
+        warnings.append(
+            f"Highlights are blown out on {clipped * 100:.0f} % of the leaf — yellowing can "
+            "be lost; retake in shade or with lower exposure."
+        )
 
     report = SeverityReport(
         severity_pct=round(severity_pct, 2),
@@ -334,7 +430,7 @@ def analyse(
         action_tier=classify_tier(severity_pct, config),
         quality_warnings=warnings,
     )
-    masks = SeverityMasks(working, leaf, healthy, chlorotic, necrotic, lesions)
+    masks = SeverityMasks(working, measurable, healthy, chlorotic, necrotic, lesions)
     return report, masks
 
 

@@ -4,84 +4,123 @@
   position: sticky;
   top: 0;
   z-index: 100;
+  height: var(--nav-h);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(1.4) blur(14px);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+
+.navbar-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-  height: 64px;
-  background: rgba(5, 13, 9, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border-subtle);
+  gap: 24px;
+  height: 100%;
 }
 
 .navbar-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  text-decoration: none;
+  font-size: 1.1rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--text);
 }
-
-.brand-icon {
-  width: 32px;
-  height: 32px;
-  animation: float 3s ease-in-out infinite;
-}
-
-.brand-text {
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
+.navbar-brand:hover { color: var(--text); }
+.navbar-brand img { border-radius: 8px; }
 
 .navbar-links {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: var(--radius-full);
+  gap: 7px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
   font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--text-dim);
-  text-decoration: none;
-  transition: all var(--transition-fast);
+  font-weight: 550;
+  color: var(--text-2);
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.nav-link:hover { color: var(--text); background: var(--surface-2); }
+.nav-link.active { color: var(--accent-soft-ink); background: var(--accent-soft); }
+
+.navbar-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
 }
 
-.nav-link:hover {
-  color: var(--text-secondary);
-  background: rgba(34, 197, 94, 0.06);
+/* ── Backend status chip ─────────────────────────────────────── */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: default;
 }
+.status-offline { cursor: pointer; }
 
-.nav-link.active {
-  color: var(--green-400);
-  background: rgba(34, 197, 94, 0.1);
+.status-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-3);
 }
+.status-online .status-chip-dot { background: var(--tier-negligible); }
+.status-limited .status-chip-dot { background: var(--tier-moderate); }
+.status-offline .status-chip-dot { background: var(--tier-critical); }
+.status-checking .status-chip-dot { animation: blink 1s ease-in-out infinite; }
 
-.nav-link.active svg {
-  filter: drop-shadow(0 0 6px rgba(34, 197, 94, 0.4));
-}
+@keyframes blink { 50% { opacity: 0.25; } }
 
-@media (max-width: 600px) {
-  .navbar {
-    padding: 0 12px;
-    height: 56px;
+/* ── Bottom tab bar (phones) ─────────────────────────────────── */
+.tabbar { display: none; }
+
+@media (max-width: 720px) {
+  .navbar-links { display: none; }
+  .navbar-inner { gap: 12px; }
+
+  .tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: saturate(1.4) blur(14px);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    border-top: 1px solid var(--border);
   }
 
-  .nav-link span {
-    display: none;
+  .tab-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-3);
+    -webkit-tap-highlight-color: transparent;
   }
-
-  .nav-link {
-    padding: 8px 12px;
-  }
+  .tab-link.active { color: var(--accent); }
 }
