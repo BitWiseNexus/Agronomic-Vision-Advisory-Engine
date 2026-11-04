@@ -202,7 +202,6 @@ def main() -> None:
 
     plain, flipped, truth = collect_logits(model, test_loader, device)
     p_raw = softmax(plain)
-    p_cal = softmax(plain, temperature)
     p_tta = (softmax(plain, temperature) + softmax(flipped, temperature)) / 2
     predicted = p_tta.argmax(1)
 

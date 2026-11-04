@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     checkpoint_path: str = "models/checkpoints/resnet50_plantvillage.pt"
     device: str = "auto"
     classifier_confidence_floor: float = 0.45
-    classifier_tta: bool = True  # average the photo with its mirror image
+    classifier_tta: bool = False  # average with the mirror image; measured no gain (ml/evaluate.py)
 
     # --- Retrieval ---------------------------------------------------------
     retrieval_top_k: int = 8

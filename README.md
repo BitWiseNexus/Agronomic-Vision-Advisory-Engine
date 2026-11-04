@@ -224,6 +224,42 @@ exactly and in alphabetical order, which is the order `ImageFolder` assigns labe
 `ml/train.py` also saves the class list into the checkpoint and `classifier.py` reads it
 back, so a label-order mismatch cannot silently make every prediction confidently wrong.
 
+## Classifier accuracy
+
+```powershell
+.\.venv\Scripts\python.exe ml\train.py          # ~75 min on a GTX 1650
+.\.venv\Scripts\python.exe ml\evaluate.py --robustness
+```
+
+ResNet-50, ImageNet weights, two-stage transfer learning (head 2 epochs, then `layer3` +
+`layer4` 6 epochs), sqrt-inverse-frequency class weights, temperature calibration. The split
+is stratified 70 / 15 / 15: validation picks the epoch and fits the temperature, the **test
+split is touched once** and scored through the exact preprocessing the API uses.
+
+| held-out test split (8,146 images, 38 classes) | |
+|---|---|
+| accuracy | **99.75 %** |
+| macro F1 / weighted F1 | 0.996 / 0.998 |
+| weakest class | Corn Cercospora leaf spot, F1 0.93 (confused with Northern Leaf Blight) |
+| calibration error (ECE) | 0.073 uncalibrated → **0.0008** calibrated (T = 0.556) |
+| inference | ~100 ms per photo on CPU, including severity and retrieval |
+
+Under simulated phone-photo conditions (2,037 test images): warm light 98.6 %, cool shade
+97.9 %, low light 99.7 %, overexposed 99.4 %, blur 99.3 %, JPEG q30 99.6 %, sensor noise 98.6 %.
+
+Read these numbers for what they are. PlantVillage is lab photography — one leaf, plain
+background, even light. The dataset's own authors (Mohanty et al., 2016) report their
+PlantVillage-trained models fell to ~31 % on leaf images from other sources, so expect a
+large drop on real field photos. The robustness rows test *lighting and camera*
+shifts, not *field clutter*. The classifier is also closed-set: shown a leaf outside its 38
+classes, or a synthetic one, it still names one of them, sometimes with high confidence.
+The confidence floor catches some of this, not all of it.
+
+Two training notes from measurement: mixed precision and channels-last made training **8×
+slower** on a GTX 1650 (no tensor cores — 8 vs 66 img/s), so both are config switches,
+off by default. Flip test-time augmentation measured no gain (99.73 % vs 99.75 %), so it
+is available (`CLASSIFIER_TTA`) but off.
+
 Cite Mohanty, Hughes & Salathé (2016), *Using Deep Learning for Image-Based Plant Disease
 Detection*, Frontiers in Plant Science. The repository carries no LICENSE file, so there is
 no explicit grant — worth checking the terms before any use beyond coursework.
@@ -254,17 +290,21 @@ data/knowledge/  the retrieval corpus (Markdown + front matter)
 data/samples/    synthetic sample leaves, one per action tier
 infra/           pgvector init SQL
 scripts/         bootstrap, sample generation, ingestion, dataset download
-tests/           76 tests — severity vs. ground truth, segmentation robustness,
+tests/           81 tests — severity vs. ground truth, segmentation robustness,
                  advisor safety, API, RAG
 ```
 
 ## Status
 
-Phase 0 complete: scaffold, runnable pipeline, severity engine validated against synthetic
-ground truth (MAE 0.54 pp) and stress-tested for colour cast, exposure, shadow, JPEG
-artefacts and cluttered backgrounds; RAG with fallbacks; provider abstraction; 76 tests
-green; all four notebooks execute end to end. Next: real PlantVillage training, then the
-React PWA. See `docs/PLAN.md`.
+Pipeline complete and measured: severity engine validated on synthetic ground truth (MAE
+0.50 pp, 99 % tier accuracy over 16 photo conditions) and on real PlantVillage leaves;
+ResNet-50 trained and calibrated (99.75 % on the held-out test split); RAG with fallbacks;
+provider abstraction; React PWA; 81 tests green.
+
+Next for accuracy, in order of impact: (1) evaluate on real field photos — PlantDoc or the
+team's own annotated leaves — since that is the number that matters in practice;
+(2) broaden the knowledge base, which covers 3 of the 38 diseases; (3) a learned leaf
+segmentation model for cluttered field scenes.
 
 > Automated advisories are decision support, not a substitute for an agronomist. Always
 > verify actives, dosages and pre-harvest intervals against the product label and your

@@ -139,10 +139,10 @@ def grey_lesions(img, leaf):
 
 CONDITIONS: dict[str, Perturb] = {
     "clean": _same,
-    "warm light": lambda i, l: (_scale(i, (0.78, 0.95, 1.22)), l.leaf_mask, l.lesion_mask),
-    "cool shade": lambda i, l: (_scale(i, (1.25, 1.02, 0.80)), l.leaf_mask, l.lesion_mask),
-    "underexposed": lambda i, l: (_scale(i, (0.45, 0.45, 0.45)), l.leaf_mask, l.lesion_mask),
-    "overexposed": lambda i, l: (_scale(i, (1.5, 1.5, 1.5)), l.leaf_mask, l.lesion_mask),
+    "warm light": lambda img, leaf: (_scale(img, (0.78, 0.95, 1.22)), leaf.leaf_mask, leaf.lesion_mask),
+    "cool shade": lambda img, leaf: (_scale(img, (1.25, 1.02, 0.80)), leaf.leaf_mask, leaf.lesion_mask),
+    "underexposed": lambda img, leaf: (_scale(img, (0.45, 0.45, 0.45)), leaf.leaf_mask, leaf.lesion_mask),
+    "overexposed": lambda img, leaf: (_scale(img, (1.5, 1.5, 1.5)), leaf.leaf_mask, leaf.lesion_mask),
     "shadow on leaf": shadow_on_leaf,
     "jpeg q30": jpeg,
     "motion blur": blur,
