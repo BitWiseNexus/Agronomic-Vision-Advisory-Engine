@@ -4,7 +4,7 @@ Both remote providers are plain `httpx` calls against a documented REST endpoint
 keeps the dependency surface at zero extra packages and makes swapping providers a
 15-line change rather than a rewrite.
 
-    groq    -> llama-3.3-70b-versatile   (OpenAI-compatible chat completions)
+    groq    -> qwen/qwen3.8-27b   (OpenAI-compatible chat completions)
     gemini  -> gemini-2.0-flash          (generateContent)
     none    -> NullProvider, which raises; the advisor then builds a deterministic plan
 

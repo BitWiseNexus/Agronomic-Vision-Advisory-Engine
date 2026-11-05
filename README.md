@@ -46,7 +46,7 @@ React PWA ──multipart(image + env JSON)──▶ FastAPI  POST /api/v1/diagn
 | Vision — measurement | OpenCV HSV masking | Deterministic and auditable. Every number is a pixel count under a stated threshold |
 | Retrieval | LlamaIndex + `bge-small-en-v1.5` (384-dim, local) | Runs on CPU, no API key, no rate limit |
 | Vector store | PostgreSQL + pgvector (HNSW, cosine) | Self-hosted, free, one container |
-| LLM | Groq `llama-3.3-70b-versatile` or Gemini `gemini-2.0-flash`, over plain `httpx` | Free tiers, no vendor SDK, swappable in ~15 lines |
+| LLM | Groq `qwen/qwen3.8-27b` or Gemini `gemini-2.0-flash`, over plain `httpx` | Free tiers, no vendor SDK, swappable in ~15 lines |
 | API | FastAPI + pydantic v2 | The schema *is* the contract, shared by API, notebooks and tests |
 
 **Everything degrades, nothing crashes.** No trained checkpoint, no Postgres, no API key,

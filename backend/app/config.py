@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # --- LLM ---------------------------------------------------------------
     llm_provider: str = "auto"  # groq | gemini | template | auto
     groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "qwen/qwen3.8-27b"
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
     llm_temperature: float = 0.2
