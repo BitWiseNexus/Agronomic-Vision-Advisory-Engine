@@ -39,7 +39,10 @@ class Settings(BaseSettings):
     # --- Vision ------------------------------------------------------------
     checkpoint_path: str = "models/checkpoints/resnet50_plantvillage.pt"
     device: str = "auto"
-    classifier_confidence_floor: float = 0.45
+    # Below this the UI says "Possibly ..." and the plan asks for confirmation. On the lab
+    # test split 99.6 % of photos score above 0.80; field photos the model has never seen
+    # the like of tend to land well below it (a spider-mite field shot: 0.55, wrong).
+    classifier_confidence_floor: float = 0.80
     classifier_tta: bool = False  # average with the mirror image; measured no gain (ml/evaluate.py)
 
     # --- Retrieval ---------------------------------------------------------

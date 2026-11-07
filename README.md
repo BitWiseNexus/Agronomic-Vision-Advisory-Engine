@@ -185,6 +185,15 @@ and are cut off with the background; olive-brown lesions (e.g. potato late bligh
 partly counted; subtle mosaic mottling barely registers. Overlapping leaves in field clutter
 defeat largest-component segmentation — a learned segmentation model is the real answer there.
 
+**Pale stippling (spider mites, thrips) is not counted.** On a real spider-mite field photo
+the pale flecks have the same hue as healthy tissue (43 vs 44 on OpenCV's 0–179 scale);
+they are only lighter and less saturated, so the photo read 0.5 %. A dedicated detector
+(morphological top-hat on brightness, black-hat on saturation, small blobs only) did find
+the flecks (0.5 → 9.5 %), but light catching the texture of healthy leaves has the same
+signature — lighter by ~22 vs ~24, no shift in hue or yellowness — and the detector doubled
+healthy false alarms (11 % → 22 % moderate+, 25 per class on PlantVillage). It was left out:
+telling stippling from texture needs a learned model, not a colour rule.
+
 Two design decisions carry that robustness, and both came out of measurement rather than
 intuition:
 
@@ -253,7 +262,14 @@ PlantVillage-trained models fell to ~31 % on leaf images from other sources, so 
 large drop on real field photos. The robustness rows test *lighting and camera*
 shifts, not *field clutter*. The classifier is also closed-set: shown a leaf outside its 38
 classes, or a synthetic one, it still names one of them, sometimes with high confidence.
-The confidence floor catches some of this, not all of it.
+
+Seen in practice: a field photo of tomato spider-mite damage (several leaves, foliage
+behind) came back as Septoria leaf spot at 55 %, with spider mites second at 13 % — while
+150 / 150 PlantVillage tomato photos through the same code were right, so the label mapping
+is sound and this is the field gap. The confidence floor is therefore **0.80**: 99.6 % of
+test-split photos score above it (the 0.4 % below are 74 % accurate), so it costs nothing on
+lab photos and turns a 55 % field guess into "Possibly …" with a confirm-first warning.
+It catches uncertain mistakes, not confident ones.
 
 Two training notes from measurement: mixed precision and channels-last made training **8×
 slower** on a GTX 1650 (no tensor cores — 8 vs 66 img/s), so both are config switches,
@@ -301,8 +317,10 @@ Pipeline complete and measured: severity engine validated on synthetic ground tr
 ResNet-50 trained and calibrated (99.75 % on the held-out test split); RAG with fallbacks;
 provider abstraction; React PWA; 81 tests green.
 
-Next for accuracy, in order of impact: (1) evaluate on real field photos — PlantDoc or the
-team's own annotated leaves — since that is the number that matters in practice;
+Next for accuracy, in order of impact: (1) fine-tune on and evaluate with real field photos —
+[PlantDoc](https://github.com/pratikkayal/PlantDoc-Dataset) (CC BY 4.0, ~2,600 images, 27
+classes that all map onto these 38, but almost no spider-mite photos) or the team's own
+leaves — since that is the number that matters in practice;
 (2) broaden the knowledge base, which covers 3 of the 38 diseases; (3) a learned leaf
 segmentation model for cluttered field scenes.
 
