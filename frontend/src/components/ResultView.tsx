@@ -25,7 +25,7 @@ interface ResultViewProps {
 }
 
 const PROVIDER_LABEL: Record<string, string> = {
-  groq: 'Groq · Llama 3.3',
+  groq: 'Groq · Qwen 3.8',
   gemini: 'Google Gemini',
   template: 'Rule-based template',
 };

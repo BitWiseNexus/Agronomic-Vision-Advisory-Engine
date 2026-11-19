@@ -101,9 +101,13 @@
   gap: 16px;
   min-width: 0;
 }
-.report-side {
-  position: sticky;
-  top: calc(var(--nav-h) + 16px);
+/* Sticky only when the window is tall enough to show the whole column; on shorter
+   screens a sticky column taller than the viewport hides its lower cards for good. */
+@media (min-height: 1000px) {
+  .report-side {
+    position: sticky;
+    top: calc(var(--nav-h) + 16px);
+  }
 }
 
 .card-title-meta { font-size: 0.8rem; font-weight: 500; }
